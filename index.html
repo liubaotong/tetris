@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>俄罗斯方块</title>
+    <style>
+        /* 添加字体 */
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap');
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #0f0f1a;
+            flex-direction: column;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #fff;
+        }
+        .game-container {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            background-color: #1a1a2e;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+            align-items: center; /* 添加垂直居中对齐 */
+        }
+        .game-area {
+            position: relative;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .game-info {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            min-width: 200px;
+        }
+        .info-block {
+            background: linear-gradient(145deg, #1a1a2e, #16213e);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        .info-block::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(77, 238, 234, 0.3), transparent);
+        }
+        .info-block h3 {
+            margin: 0 0 15px 0;
+            color: #4DEEEA;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(77, 238, 234, 0.5);
+        }
+        #score {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: #4DEEEA;
+            text-align: center;
+            text-shadow: 0 0 15px rgba(77, 238, 234, 0.5);
+            letter-spacing: 1px;
+            margin: 0;
+            padding: 15px;
+            background: linear-gradient(145deg, #1a1a2e, #16213e);
+            border-radius: 8px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+        #score::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(77, 238, 234, 0.3), transparent);
+        }
+        .preview-container {
+            margin: 0;
+        }
+        .controls {
+            margin: 0;
+        }
+        .key {
+            background: linear-gradient(145deg, #1a1a2e, #16213e);
+            padding: 4px 10px;
+            border-radius: 4px;
+            margin: 0 2px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(77, 238, 234, 0.2);
+            font-family: 'Orbitron', sans-serif;
+            display: inline-block;
+            min-width: 20px;
+            text-align: center;
+        }
+        .key-row {
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+        }
+        .key-label {
+            flex: 1;
+            text-align: right;
+            color: rgba(77, 238, 234, 0.8);
+        }
+        canvas {
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+            display: block; /* 确保canvas没有额外的空间 */
+        }
+        .game-status {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+            display: none;
+        }
+        @media (max-width: 768px) {
+            .game-container {
+                flex-direction: column;
+            }
+            .game-info {
+                order: -1;
+            }
+            canvas {
+                max-width: 100%;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-area">
+            <canvas id="tetris" width="240" height="400"></canvas>
+            <div id="pause-screen" class="game-status">游戏暂停</div>
+        </div>
+        <div class="game-info">
+            <div id="score">分数: 0</div>
+            <div class="info-block preview-container">
+                <h3>下一个方块</h3>
+                <canvas id="preview" width="80" height="80"></canvas>
+            </div>
+            <div class="info-block controls">
+                <h3>游戏控制</h3>
+                <div class="key-row">
+                    <span class="key-label">移动</span>
+                    <span class="key">←</span>
+                    <span class="key">→</span>
+                </div>
+                <div class="key-row">
+                    <span class="key-label">加速</span>
+                    <span class="key">↓</span>
+                </div>
+                <div class="key-row">
+                    <span class="key-label">旋转</span>
+                    <span class="key">Q</span>
+                    <span class="key">W</span>
+                </div>
+                <div class="key-row">
+                    <span class="key-label">暂停</span>
+                    <span class="key">P</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('tetris');
+        const context = canvas.getContext('2d');
+        const previewCanvas = document.getElementById('preview');
+        const previewContext = previewCanvas.getContext('2d');
+        context.scale(20, 20);
+        previewContext.scale(20, 20);
+
+        let isPaused = false;
+
+        const colors = [
+            null,
+            '#FF3366', // I - 鲜艳的粉红色
+            '#4DEEEA', // J - 青绿色
+            '#74EE15', // L - 鲜艳的绿色
+            '#FFE700', // O - 明亮的黄色
+            '#F000FF', // S - 亮紫色
+            '#FF7700', // T - 明亮的橙色
+            '#001EFF', // Z - 亮蓝色
+        ];
+
+        function arenaSweep() {
+            let rowCount = 1;
+            outer: for (let y = arena.length - 1; y > 0; --y) {
+                for (let x = 0; x < arena[y].length; ++x) {
+                    if (arena[y][x] === 0) {
+                        continue outer;
+                    }
+                }
+
+                const row = arena.splice(y, 1)[0].fill(0);
+                arena.unshift(row);
+                ++y;
+
+                player.score += rowCount * 10;
+                rowCount *= 2;
+            }
+        }
+
+        function collide(arena, player) {
+            const [m, o] = [player.matrix, player.pos];
+            for (let y = 0; y < m.length; ++y) {
+                for (let x = 0; x < m[y].length; ++x) {
+                    if (m[y][x] !== 0 &&
+                       (arena[y + o.y] &&
+                        arena[y + o.y][x + o.x]) !== 0) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function createMatrix(w, h) {
+            const matrix = [];
+            while (h--) {
+                matrix.push(new Array(w).fill(0));
+            }
+            return matrix;
+        }
+
+        function createPiece(type) {
+            if (type === 'T') {
+                return [
+                    [0, 0, 0],
+                    [6, 6, 6],
+                    [0, 6, 0],
+                ];
+            } else if (type === 'O') {
+                return [
+                    [4, 4],
+                    [4, 4],
+                ];
+            } else if (type === 'L') {
+                return [
+                    [0, 3, 0],
+                    [0, 3, 0],
+                    [0, 3, 3],
+                ];
+            } else if (type === 'J') {
+                return [
+                    [0, 2, 0],
+                    [0, 2, 0],
+                    [2, 2, 0],
+                ];
+            } else if (type === 'I') {
+                return [
+                    [0, 1, 0, 0],
+                    [0, 1, 0, 0],
+                    [0, 1, 0, 0],
+                    [0, 1, 0, 0],
+                ];
+            } else if (type === 'S') {
+                return [
+                    [0, 5, 5],
+                    [5, 5, 0],
+                    [0, 0, 0],
+                ];
+            } else if (type === 'Z') {
+                return [
+                    [7, 7, 0],
+                    [0, 7, 7],
+                    [0, 0, 0],
+                ];
+            }
+        }
+
+        function drawMatrix(matrix, offset) {
+            matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        // 计算渐变色
+                        const baseColor = colors[value];
+                        const gradient = context.createLinearGradient(
+                            x + offset.x, 
+                            y + offset.y, 
+                            x + offset.x + 1, 
+                            y + offset.y + 1
+                        );
+                        gradient.addColorStop(0, baseColor);
+                        gradient.addColorStop(1, shadeColor(baseColor, -20)); // 暗化 20%
+
+                        // 填充方块主体颜色
+                        context.fillStyle = gradient;
+                        context.fillRect(x + offset.x, y + offset.y, 1, 1);
+                        
+                        // 添加亮色边框（上边和左边）
+                        context.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                        context.fillRect(x + offset.x, y + offset.y, 0.1, 1); // 左边
+                        context.fillRect(x + offset.x, y + offset.y, 1, 0.1); // 上边
+                        
+                        // 添加暗色边框（下边和右边）
+                        context.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                        context.fillRect(x + offset.x + 0.9, y + offset.y, 0.1, 1); // 右边
+                        context.fillRect(x + offset.x, y + offset.y + 0.9, 1, 0.1); // 下边
+                    }
+                });
+            });
+        }
+
+        function merge(arena, player) {
+            player.matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        arena[y + player.pos.y][x + player.pos.x] = value;
+                    }
+                });
+            });
+        }
+
+        function rotate(matrix, dir) {
+            for (let y = 0; y < matrix.length; ++y) {
+                for (let x = 0; x < y; ++x) {
+                    [
+                        matrix[x][y],
+                        matrix[y][x],
+                    ] = [
+                        matrix[y][x],
+                        matrix[x][y],
+                    ];
+                }
+            }
+
+            if (dir > 0) {
+                matrix.forEach(row => row.reverse());
+            } else {
+                matrix.reverse();
+            }
+        }
+
+        function playerDrop() {
+            player.pos.y++;
+            if (collide(arena, player)) {
+                player.pos.y--;
+                merge(arena, player);
+                playerReset();
+                arenaSweep();
+                updateScore();
+            }
+            dropCounter = 0;
+        }
+
+        function playerMove(dir) {
+            player.pos.x += dir;
+            if (collide(arena, player)) {
+                player.pos.x -= dir;
+            }
+        }
+
+        function playerReset() {
+            const pieces = 'ILJOTSZ';
+            if (!player.nextPiece) {
+                const type = pieces[pieces.length * Math.random() | 0];
+                player.nextPiece = createPiece(type);
+            }
+            player.matrix = player.nextPiece;
+            const nextType = pieces[pieces.length * Math.random() | 0];
+            player.nextPiece = createPiece(nextType);
+            player.pos.y = 0;
+            player.pos.x = (arena[0].length / 2 | 0) -
+                          (player.matrix[0].length / 2 | 0);
+            if (collide(arena, player)) {
+                arena.forEach(row => row.fill(0));
+                player.score = 0;
+                updateScore();
+            }
+            drawPreview();
+        }
+
+        function playerRotate(dir) {
+            const pos = player.pos.x;
+            let offset = 1;
+            rotate(player.matrix, dir);
+            while (collide(arena, player)) {
+                player.pos.x += offset;
+                offset = -(offset + (offset > 0 ? 1 : -1));
+                if (offset > player.matrix[0].length) {
+                    rotate(player.matrix, -dir);
+                    player.pos.x = pos;
+                    return;
+                }
+            }
+        }
+
+        function drawPreview() {
+            previewContext.fillStyle = '#333';
+            previewContext.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+            
+            // 绘制预览区域的背景网格
+            drawPreviewGrid();
+            
+            const offset = {
+                x: (previewCanvas.width / 40) - (player.nextPiece[0].length / 2),
+                y: (previewCanvas.height / 40) - (player.nextPiece.length / 2)
+            };
+            
+            player.nextPiece.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        // 计算渐变色
+                        const baseColor = colors[value];
+                        const gradient = previewContext.createLinearGradient(
+                            x + offset.x, 
+                            y + offset.y, 
+                            x + offset.x + 1, 
+                            y + offset.y + 1
+                        );
+                        gradient.addColorStop(0, baseColor);
+                        gradient.addColorStop(1, shadeColor(baseColor, -20)); // 暗化 20%
+
+                        // 填充方块主体颜色
+                        previewContext.fillStyle = gradient;
+                        previewContext.fillRect(x + offset.x, y + offset.y, 1, 1);
+                        
+                        // 添加亮色边框（上边和左边）
+                        previewContext.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                        previewContext.fillRect(x + offset.x, y + offset.y, 0.1, 1); // 左边
+                        previewContext.fillRect(x + offset.x, y + offset.y, 1, 0.1); // 上边
+                        
+                        // 添加暗色边框（下边和右边）
+                        previewContext.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                        previewContext.fillRect(x + offset.x + 0.9, y + offset.y, 0.1, 1); // 右边
+                        previewContext.fillRect(x + offset.x, y + offset.y + 0.9, 1, 0.1); // 下边
+                    }
+                });
+            });
+        }
+
+        // 辅助函数：调整颜色明暗度
+        function shadeColor(color, percent) {
+            let R = parseInt(color.substring(1,3),16);
+            let G = parseInt(color.substring(3,5),16);
+            let B = parseInt(color.substring(5,7),16);
+
+            R = parseInt(R * (100 + percent) / 100);
+            G = parseInt(G * (100 + percent) / 100);
+            B = parseInt(B * (100 + percent) / 100);
+
+            R = (R<255)?R:255;  
+            G = (G<255)?G:255;  
+            B = (B<255)?B:255;  
+
+            R = Math.round(R);
+            G = Math.round(G);
+            B = Math.round(B);
+
+            const RR = ((R.toString(16).length==1)?"0"+R.toString(16):R.toString(16));
+            const GG = ((G.toString(16).length==1)?"0"+G.toString(16):G.toString(16));
+            const BB = ((B.toString(16).length==1)?"0"+B.toString(16):B.toString(16));
+
+            return "#"+RR+GG+BB;
+        }
+
+        function updateScore() {
+            document.getElementById('score').innerText = '分数: ' + player.score;
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            document.getElementById('pause-screen').style.display = isPaused ? 'block' : 'none';
+        }
+
+        function drawGrid() {
+            // 绘制背景
+            const bgGradient = context.createLinearGradient(0, 0, 0, arena.length);
+            bgGradient.addColorStop(0, '#1a1a2e');   // 深蓝色顶部
+            bgGradient.addColorStop(1, '#16213e');   // 更深的蓝色底部
+            context.fillStyle = bgGradient;
+            context.fillRect(0, 0, arena[0].length, arena.length);
+
+            // 绘制网格线
+            // 垂直线
+            for (let i = 0; i <= arena[0].length; i++) {
+                const gradient = context.createLinearGradient(i, 0, i, arena.length);
+                gradient.addColorStop(0, 'rgba(52, 84, 209, 0.15)');    // 顶部较亮
+                gradient.addColorStop(0.5, 'rgba(52, 84, 209, 0.2)');   // 中间稍亮
+                gradient.addColorStop(1, 'rgba(52, 84, 209, 0.15)');    // 底部较暗
+                
+                context.strokeStyle = gradient;
+                context.lineWidth = 0.05;
+                context.beginPath();
+                context.moveTo(i, 0);
+                context.lineTo(i, arena.length);
+                context.stroke();
+            }
+
+            // 水平线
+            for (let i = 0; i <= arena.length; i++) {
+                const gradient = context.createLinearGradient(0, i, arena[0].length, i);
+                gradient.addColorStop(0, 'rgba(52, 84, 209, 0.15)');    // 左侧较暗
+                gradient.addColorStop(0.5, 'rgba(52, 84, 209, 0.2)');   // 中间稍亮
+                gradient.addColorStop(1, 'rgba(52, 84, 209, 0.15)');    // 右侧较暗
+                
+                context.strokeStyle = gradient;
+                context.beginPath();
+                context.moveTo(0, i);
+                context.lineTo(arena[0].length, i);
+                context.stroke();
+            }
+        }
+
+        function drawPreviewGrid() {
+            // 绘制预览区域的背景
+            const bgGradient = previewContext.createLinearGradient(0, 0, 0, 5);
+            bgGradient.addColorStop(0, '#1a1a2e');
+            bgGradient.addColorStop(1, '#16213e');
+            previewContext.fillStyle = bgGradient;
+            previewContext.fillRect(0, 0, 5, 5);
+
+            // 绘制预览区域的网格线
+            previewContext.strokeStyle = 'rgba(52, 84, 209, 0.2)';
+            previewContext.lineWidth = 0.05;
+
+            const gridSize = 5;
+
+            // 垂直线
+            for (let i = 0; i <= gridSize; i++) {
+                const gradient = previewContext.createLinearGradient(i, 0, i, gridSize);
+                gradient.addColorStop(0, 'rgba(52, 84, 209, 0.15)');
+                gradient.addColorStop(0.5, 'rgba(52, 84, 209, 0.2)');
+                gradient.addColorStop(1, 'rgba(52, 84, 209, 0.15)');
+                
+                previewContext.strokeStyle = gradient;
+                previewContext.beginPath();
+                previewContext.moveTo(i, 0);
+                previewContext.lineTo(i, gridSize);
+                previewContext.stroke();
+            }
+
+            // 水平线
+            for (let i = 0; i <= gridSize; i++) {
+                const gradient = previewContext.createLinearGradient(0, i, gridSize, i);
+                gradient.addColorStop(0, 'rgba(52, 84, 209, 0.15)');
+                gradient.addColorStop(0.5, 'rgba(52, 84, 209, 0.2)');
+                gradient.addColorStop(1, 'rgba(52, 84, 209, 0.15)');
+                
+                previewContext.strokeStyle = gradient;
+                previewContext.beginPath();
+                previewContext.moveTo(0, i);
+                previewContext.lineTo(gridSize, i);
+                previewContext.stroke();
+            }
+        }
+
+        function draw() {
+            // 不再需要这个黑色背景，因为在drawGrid中已经绘制了渐变背景
+            drawGrid();
+            drawMatrix(arena, {x: 0, y: 0});
+            drawMatrix(player.matrix, player.pos);
+        }
+
+        let dropCounter = 0;
+        let dropInterval = 1000;
+
+        let lastTime = 0;
+        function update(time = 0) {
+            if (isPaused) {
+                requestAnimationFrame(update);
+                return;
+            }
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+
+            dropCounter += deltaTime;
+            if (dropCounter > dropInterval) {
+                playerDrop();
+            }
+
+            draw();
+            requestAnimationFrame(update);
+        }
+
+        const arena = createMatrix(12, 20);
+
+        const player = {
+            pos: {x: 0, y: 0},
+            matrix: null,
+            score: 0,
+            nextPiece: null
+        };
+
+        document.addEventListener('keydown', event => {
+            if (event.keyCode === 37) {
+                playerMove(-1);
+            } else if (event.keyCode === 39) {
+                playerMove(1);
+            } else if (event.keyCode === 40) {
+                playerDrop();
+            } else if (event.keyCode === 81) {
+                playerRotate(-1);
+            } else if (event.keyCode === 87) {
+                playerRotate(1);
+            } else if (event.keyCode === 80) { // P键暂停
+                togglePause();
+            }
+        });
+
+        // 添加触摸控制支持
+        let touchStartX = null;
+        let touchStartY = null;
+
+        document.addEventListener('touchstart', event => {
+            touchStartX = event.touches[0].clientX;
+            touchStartY = event.touches[0].clientY;
+        });
+
+        document.addEventListener('touchmove', event => {
+            if (!touchStartX || !touchStartY) return;
+
+            const touchEndX = event.touches[0].clientX;
+            const touchEndY = event.touches[0].clientY;
+            const diffX = touchEndX - touchStartX;
+            const diffY = touchEndY - touchStartY;
+
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (diffX > 30) playerMove(1);
+                else if (diffX < -30) playerMove(-1);
+            } else {
+                if (diffY > 30) playerDrop();
+                else if (diffY < -30) playerRotate(1);
+            }
+
+            touchStartX = touchEndX;
+            touchStartY = touchEndY;
+        });
+
+        document.addEventListener('touchend', () => {
+            touchStartX = null;
+            touchStartY = null;
+        });
+
+        playerReset();
+        updateScore();
+        update();
+    </script>
+</body>
+</html>
